@@ -12,5 +12,5 @@ data class AndelTilkjentYtelse(@Column("belop")
                                val type: YtelseType)
 
 enum class YtelseType(val klassifisering: String) {
-    OVERGANGSSTØNAD("??")
+    OVERGANGSSTØNAD("EFOG")
 }

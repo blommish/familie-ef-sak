@@ -74,7 +74,7 @@ class TilkjentYtelseServiceTest {
         val id = tilkjentYtelse.id
         val oppdragId = OppdragId("EF",
                                   tilkjentYtelse.personident,
-                                  tilkjentYtelse.id.toString())
+                                  tilkjentYtelse.periodeIdStart.toString())
         every { tilkjentYtelseRepository.findByIdOrNull(id) } returns tilkjentYtelse
         every { økonomiKlient.hentStatus(oppdragId) } returns Ressurs.success(OppdragStatus.KVITTERT_OK)
 

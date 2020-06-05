@@ -1,5 +1,6 @@
 package no.nav.familie.ef.sak.økonomi.dto
 
+import no.nav.familie.ef.sak.økonomi.domain.TilkjentYtelseStatus
 import no.nav.familie.ef.sak.økonomi.domain.YtelseType
 import java.time.LocalDate
 import java.util.*
@@ -7,6 +8,7 @@ import java.util.*
 data class TilkjentYtelseDTO(val søker: String,
                              val saksnummer: String,
                              val vedtaksdato: LocalDate = LocalDate.now(),
+                             val status: TilkjentYtelseStatus?=null,
                              val id: UUID = UUID.randomUUID(),
                              val andelerTilkjentYtelse: List<AndelTilkjentYtelseDTO>) {
 

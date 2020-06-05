@@ -38,6 +38,7 @@ fun TilkjentYtelse.tilDto(): TilkjentYtelseDTO {
     return TilkjentYtelseDTO(id = this.id,
                              søker = this.personident,
                              saksnummer = this.saksnummer,
+                             status = this.status,
                              andelerTilkjentYtelse = this.andelerTilkjentYtelse.map { it.tilDto() })
 }
 

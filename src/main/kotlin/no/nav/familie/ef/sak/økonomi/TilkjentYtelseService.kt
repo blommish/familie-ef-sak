@@ -104,7 +104,7 @@ class TilkjentYtelseService(private val økonomiKlient: ØkonomiKlient,
 
         val oppdragId = OppdragId(fagsystem = FAGSYSTEM,
                                   personIdent = tilkjentYtelse.personident,
-                                  behandlingsId = tilkjentYtelse.id.toString())
+                                  behandlingsId = tilkjentYtelse.periodeIdStart.toString())
 
         return økonomiKlient.hentStatus(oppdragId).getDataOrThrow()
     }

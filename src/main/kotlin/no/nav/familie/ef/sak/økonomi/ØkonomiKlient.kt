@@ -1,5 +1,7 @@
 package no.nav.familie.ef.sak.økonomi
 
+import no.nav.familie.ef.sak.økonomi.exception.IngenTilgangException
+import no.nav.familie.ef.sak.økonomi.exception.UkjentOppdragException
 import no.nav.familie.http.client.AbstractRestClient
 import no.nav.familie.kontrakter.felles.Ressurs
 import no.nav.familie.kontrakter.felles.oppdrag.OppdragId
@@ -8,14 +10,16 @@ import no.nav.familie.kontrakter.felles.oppdrag.Utbetalingsoppdrag
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpMethod
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
+import org.springframework.web.client.HttpServerErrorException
 import org.springframework.web.client.RestOperations
 import org.springframework.web.client.exchange
 import java.net.URI
 import java.time.LocalDateTime
 
-const val FAGSYSTEM = "EF"
+const val FAGSYSTEM = "EFOG"
 
 @Service
 class ØkonomiKlient(@Value("\${FAMILIE_OPPDRAG_API_URL}")
@@ -27,7 +31,15 @@ class ØkonomiKlient(@Value("\${FAMILIE_OPPDRAG_API_URL}")
     }
 
     fun hentStatus(oppdragId: OppdragId): Ressurs<OppdragStatus> {
-        return postForEntity(URI.create("$familieOppdragUri/api/status"), oppdragId)
+        try {
+            return postForEntity(URI.create("$familieOppdragUri/api/status"), oppdragId)
+        } catch(e: HttpServerErrorException) {
+            when(e.statusCode) {
+                HttpStatus.NOT_FOUND -> throw UkjentOppdragException(oppdragId, e)
+                HttpStatus.UNAUTHORIZED -> throw IngenTilgangException(e)
+                else -> throw e
+            }
+        }
     }
 
     fun grensesnittavstemOppdrag(fraDato: LocalDateTime, tilDato: LocalDateTime): ResponseEntity<Ressurs<String>> {

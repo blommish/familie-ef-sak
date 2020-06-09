@@ -1,9 +1,11 @@
 package no.nav.familie.ef.sak.økonomi
 
+import no.nav.familie.ef.sak.økonomi.domain.TilkjentYtelseStatus
 import no.nav.familie.ef.sak.økonomi.dto.TilkjentYtelseDTO
+import no.nav.familie.ef.sak.økonomi.exception.UkjentOppdragException
 import no.nav.familie.kontrakter.felles.oppdrag.OppdragStatus
+import no.nav.familie.kontrakter.felles.oppdrag.Utbetalingsoppdrag
 import no.nav.security.token.support.core.api.ProtectedWithClaims
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder
@@ -19,7 +21,7 @@ class TilkjentYtelseController(private val tilkjentYtelseService: TilkjentYtelse
 
         tilkjentYtelseDTO.valider()
 
-        val tilkjentYtelseId = tilkjentYtelseService.opprettTilkjentYtelse(tilkjentYtelseDTO)
+        val tilkjentYtelseId = tilkjentYtelseService.opprettTilkjentYtelseOgIverksettUtbetaling(tilkjentYtelseDTO)
 
         val location = ServletUriComponentsBuilder.fromCurrentRequestUri()
                 .pathSegment(tilkjentYtelseId.toString())
@@ -35,29 +37,41 @@ class TilkjentYtelseController(private val tilkjentYtelseService: TilkjentYtelse
         return ResponseEntity.ok(tilkjentYtelseDto)
     }
 
-    @PutMapping("{tilkjentYtelseId}/utbetaling")
-    fun sørgForUtbetaling(@PathVariable tilkjentYtelseId: UUID): HttpStatus {
-        tilkjentYtelseService.iverksettUtbetalingsoppdrag(tilkjentYtelseId)
+    @GetMapping("{tilkjentYtelseId}/status")
+    fun hentTilkjentYtelseStatus(@PathVariable tilkjentYtelseId: UUID): ResponseEntity<TilkjentYtelseStatus> {
+        val tilkjentYtelseDto = tilkjentYtelseService.hentTilkjentYtelseDto(tilkjentYtelseId)
 
-        return HttpStatus.ACCEPTED
+        return ResponseEntity.ok(tilkjentYtelseDto.status)
     }
 
-    @DeleteMapping("{tilkjentYtelseId}/utbetaling")
+
+    @GetMapping("{tilkjentYtelseId}/utbetaling")
+    fun hentUtbetaling(@PathVariable tilkjentYtelseId: UUID): ResponseEntity<Utbetalingsoppdrag> {
+        val utbetalingsoppdrag = tilkjentYtelseService.hentUtbetalingsoppdrag(tilkjentYtelseId)
+
+        return utbetalingsoppdrag?.let { ResponseEntity.ok(utbetalingsoppdrag) } ?: ResponseEntity.notFound().build()
+    }
+
+    @DeleteMapping("{tilkjentYtelseId}")
     fun opphørUtbetaling(@PathVariable tilkjentYtelseId: UUID): ResponseEntity<Long> {
-        val opphørtTilkjentYtelseId = tilkjentYtelseService.opphørUtbetalingsoppdrag(tilkjentYtelseId)
+        val opphørtTilkjentYtelseId = tilkjentYtelseService.avsluttTilkjentYtelseOgOpphørUtbetalingsoppdrag(tilkjentYtelseId)
 
         val location = ServletUriComponentsBuilder.fromCurrentRequestUri()
                 .pathSegment(opphørtTilkjentYtelseId.toString())
                 .build().toUri()
 
-        return ResponseEntity.status(HttpStatus.MOVED_PERMANENTLY).location(location).build()
+        return ResponseEntity.accepted().location(location).build()
     }
 
-    @GetMapping("{tilkjentYtelseId}/utbetaling")
+    @GetMapping("{tilkjentYtelseId}/utbetaling/status")
     fun hentStatusUtbetaling(@PathVariable tilkjentYtelseId: UUID): ResponseEntity<OppdragStatus> {
-        val status = tilkjentYtelseService.hentStatus(tilkjentYtelseId)
+        try {
+            val status = tilkjentYtelseService.hentOppdragStatus(tilkjentYtelseId)
+            return ResponseEntity.ok(status)
+        } catch(e: UkjentOppdragException) {
+            return ResponseEntity.notFound().build()
+        }
 
-        return ResponseEntity.ok(status)
     }
 
 }

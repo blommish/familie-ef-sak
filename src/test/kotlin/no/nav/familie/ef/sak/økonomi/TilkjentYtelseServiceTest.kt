@@ -72,13 +72,13 @@ class TilkjentYtelseServiceTest {
     fun `hent status fra oppdragstjenesten`() {
         val tilkjentYtelse = DataGenerator.tilfeldigTilkjentYtelse()
         val id = tilkjentYtelse.id
-        val oppdragId = OppdragId("EF",
+        val oppdragId = OppdragId("EFOG",
                                   tilkjentYtelse.personident,
                                   tilkjentYtelse.periodeIdStart.toString())
         every { tilkjentYtelseRepository.findByIdOrNull(id) } returns tilkjentYtelse
         every { økonomiKlient.hentStatus(oppdragId) } returns Ressurs.success(OppdragStatus.KVITTERT_OK)
 
-        tilkjentYtelseService.hentStatus(id)
+        tilkjentYtelseService.hentOppdragStatus(id)
 
         verify { tilkjentYtelseRepository.findByIdOrNull(id) }
         verify { økonomiKlient.hentStatus(oppdragId) }
@@ -131,7 +131,7 @@ class TilkjentYtelseServiceTest {
         every { tilkjentYtelseRepository.save(capture(ytelseSlot)) }
                 .returns(opphørtTilkjentYtelseSendtUtbetalingsoppdrag)
 
-        tilkjentYtelseService.opphørUtbetalingsoppdrag(id, opphørDato)
+        tilkjentYtelseService.avsluttTilkjentYtelseOgOpphørUtbetalingsoppdrag(id, opphørDato)
 
         verify { tilkjentYtelseRepository.findByIdOrNull(id) }
         verify { tilkjentYtelseRepository.save(avsluttetOriginalTilkjentYtelse) }

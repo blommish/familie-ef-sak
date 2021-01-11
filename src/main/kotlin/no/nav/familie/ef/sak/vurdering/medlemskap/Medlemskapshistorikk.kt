@@ -14,10 +14,11 @@ class Medlemskapshistorikk(pdlPerson: PdlPerson, medlemskapsinfo: Medlemskapsinf
                                         medlemskapsinfo: Medlemskapsinfo): List<Periode> {
 
         val bosattPerioder = mapTilBosattperioder(pdlPerson.bostedsadresse)
+        // Medlemskapsinfo: gjelderMedlemskapIFolketrygden = har gyldig medlemsskap
+        // Medlemskapsinfo: gyldigePerioder == fattede vedtak
         val unntaksperioder =
-                medlemskapsinfo.gyldigePerioder.map { Periode(it.fom, it.tom, true) } +
-                medlemskapsinfo.uavklartePerioder.map { Periode(it.fom, it.tom, null) } +
-                medlemskapsinfo.avvistePerioder.map { Periode(it.fom, it.tom, false) }.sortedBy { it.fradato }
+                medlemskapsinfo.gyldigePerioder.map { Periode(it.fom, it.tom, it.gjelderMedlemskapIFolketrygden) } +
+                medlemskapsinfo.uavklartePerioder.map { Periode(it.fom, it.tom, null) }.sortedBy { it.fradato }
 
         if (unntaksperioder.isEmpty()) {
             return bosattPerioder
@@ -46,7 +47,7 @@ class Medlemskapshistorikk(pdlPerson: PdlPerson, medlemskapsinfo: Medlemskapsinf
                 periodeTilFusjonering == null -> { // Opprett ny periode
                     medlemskapsperiode
                 }
-                periodeTilFusjonering.gyldig == medlemskapsperiode.gyldig -> {
+                periodeTilFusjonering.gyldigMedlemsskap == medlemskapsperiode.gyldigMedlemsskap -> {
                     // Like statuser, utvid periode
                     periodeTilFusjonering.copy(tildato = medlemskapsperiode.tildato)
                 }
@@ -150,7 +151,7 @@ class Medlemskapshistorikk(pdlPerson: PdlPerson, medlemskapsinfo: Medlemskapsinf
 
 }
 
-data class Periode(val fradato: LocalDate, val tildato: LocalDate, val gyldig: Boolean?) {
+data class Periode(val fradato: LocalDate, val tildato: LocalDate, val gyldigMedlemsskap: Boolean?) {
 
     fun inneholder(date: LocalDate): Boolean {
         return (!date.isBefore(fradato) && !date.isAfter(tildato))

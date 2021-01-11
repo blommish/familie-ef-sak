@@ -81,10 +81,10 @@ class MedlemskapRegelsett {
     private fun erMedlem(medlemskapsgrunnlag: Medlemskapsgrunnlag): Evaluering {
         val statusNå =
                 medlemskapsgrunnlag.medlemskapshistorikk.medlemskapsperioder.find { it.inneholder(LocalDate.now()) }
-        if (statusNå == null || statusNå.gyldig == false) {
+        if (statusNå == null || statusNå.gyldigMedlemsskap == false) {
             return Evaluering.nei("Er IKKE MEDLEM")
         }
-        if (statusNå.gyldig == null) {
+        if (statusNå.gyldigMedlemsskap == null) {
             return Evaluering.kanskje("Uavklart medlemskapsunntak nå")
         }
         return Evaluering.ja("Søke er registrert som medlem nå.")
@@ -120,10 +120,10 @@ class MedlemskapRegelsett {
             it.tildato.isAfter(søknadsdato.minusYears(antallÅrOpphold))
         }
 
-        if (statusSisteÅr.any { it.gyldig == false }) {
+        if (statusSisteÅr.any { it.gyldigMedlemsskap == false }) {
             return Evaluering.nei("Her hatt medlemskapsunntak siste $antallÅrOpphold år")
         }
-        if (statusSisteÅr.any { it.gyldig == null }) {
+        if (statusSisteÅr.any { it.gyldigMedlemsskap == null }) {
             return Evaluering.kanskje("Her hatt uavklart medlemskapsunntak siste $antallÅrOpphold år")
         }
 
@@ -133,14 +133,14 @@ class MedlemskapRegelsett {
     private fun medlemskapslengdeAvbruddMindreEnn10år(medlemskapsgrunnlag: Medlemskapsgrunnlag): Evaluering {
         val perioderSiden16årsdag = perioderMellom16årsdagOgSøknadsdato(medlemskapsgrunnlag)
 
-        val gyldigePerioderSiden16årsdag = perioderSiden16årsdag.filter { it.gyldig == true }
-        val ugyldigePerioderSiden16årsdag = perioderSiden16årsdag.filter { it.gyldig == false }
+        val gyldigePerioderSiden16årsdag = perioderSiden16årsdag.filter { it.gyldigMedlemsskap == true }
+        val ugyldigePerioderSiden16årsdag = perioderSiden16årsdag.filter { it.gyldigMedlemsskap == false }
 
         if (ugyldigePerioderSiden16årsdag.any { it.lengde.years >= 10 }) {
             return Evaluering.nei("Lenger avbrudd enn 10 år ")
         }
 
-        val uavklartePerioderSiden16årsdag = perioderSiden16årsdag.filter { it.gyldig == null }
+        val uavklartePerioderSiden16årsdag = perioderSiden16årsdag.filter { it.gyldigMedlemsskap == null }
         if (fusjonerKonsekutivePerioder(ugyldigePerioderSiden16årsdag, uavklartePerioderSiden16årsdag)
                         .any { it.lengde.years >= 10 }) {
             return Evaluering.kanskje("Uavklart avbrudd lenger enn 10 år ")
@@ -163,8 +163,8 @@ class MedlemskapRegelsett {
 
         val perioderSiden16årsdag = perioderMellom16årsdagOgSøknadsdato(medlemskapsgrunnlag)
 
-        val gyldigePerioderSiden16årsdag = perioderSiden16årsdag.filter { it.gyldig == true }
-        val uavklartePerioderSiden16årsdag = perioderSiden16årsdag.filter { it.gyldig == null }
+        val gyldigePerioderSiden16årsdag = perioderSiden16årsdag.filter { it.gyldigMedlemsskap == true }
+        val uavklartePerioderSiden16årsdag = perioderSiden16årsdag.filter { it.gyldigMedlemsskap == null }
 
         val sumGyldigePerioder = gyldigePerioderSiden16årsdag.fold(Period.ZERO) { acc, it -> acc.plus(it.lengde) }
         if (sumGyldigePerioder.years >= 7) {

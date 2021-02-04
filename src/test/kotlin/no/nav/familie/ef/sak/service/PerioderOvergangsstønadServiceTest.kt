@@ -15,6 +15,7 @@ import no.nav.familie.kontrakter.felles.ef.PerioderOvergangsstønadRequest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
+import java.time.LocalDate.parse
 
 internal class PerioderOvergangsstønadServiceTest {
 
@@ -55,6 +56,49 @@ internal class PerioderOvergangsstønadServiceTest {
             infotrygdReplikaClient.hentPerioderOvergangsstønad(InfotrygdPerioderOvergangsstønadRequest(setOf(ident)))
         }
     }
+
+    @Test
+    internal fun `skal slå sammen perioder til arena`() {
+        mockPdl()
+        val infotrygPerioder = listOf(periode(parse("2017-08-01"), parse("2018-04-30"), 1f, parse("2018-07-31")),
+                                      periode(parse("2018-05-01"), parse("2020-07-31"), 1f, parse("2018-07-31")),
+                                      periode(parse("2018-09-01"), parse("2018-12-31"), 1f),
+                                      periode(parse("2019-01-01"), parse("2019-04-30"), 1f),
+                                      periode(parse("2019-05-01"), parse("2020-04-30"), 1f),
+                                      periode(parse("2020-05-01"), parse("2020-08-31"), 1f))
+
+        every { infotrygdReplikaClient.hentPerioderOvergangsstønad(any()) } returns
+                InfotrygdPerioderOvergangsstønadResponse(infotrygPerioder)
+
+        val perioder = perioderOvergangsstønadService.hentPerioder(PerioderOvergangsstønadRequest(ident))
+
+        val fomTomDatoer = perioder.perioder.map { it.fomDato to it.tomDato }
+        assertThat(fomTomDatoer).isEqualTo(listOf(parse("2017-08-01") to parse("2018-07-31"),
+                                                  parse("2018-09-01") to parse("2020-08-31")))
+    }
+
+    @Test
+    internal fun `skal slå sammen perioder til arena 2`() {
+        mockPdl()
+        val infotrygPerioder = listOf(periode(parse("2018-12-01"), parse("2019-04-30"), 1f),
+                                       periode(parse("2019-05-01"), parse("2019-12-31"), 1f),
+                                       periode(parse("2019-12-01"), parse("2020-02-29"), 1f),
+                                       periode(parse("2020-02-01"), parse("2020-04-30"), 1f),
+                                       periode(parse("2020-05-01"), parse("2020-10-31"), 1f),
+                                       periode(parse("2020-09-01"), parse("2020-12-31"), 1f),
+                                       periode(parse("2021-01-01"), parse("2022-01-31"), 1f))
+
+        every { infotrygdReplikaClient.hentPerioderOvergangsstønad(any()) } returns
+                InfotrygdPerioderOvergangsstønadResponse(infotrygPerioder)
+
+        val perioder = perioderOvergangsstønadService.hentPerioder(PerioderOvergangsstønadRequest(ident))
+
+        val fomTomDatoer = perioder.perioder.map { it.fomDato to it.tomDato }
+        assertThat(fomTomDatoer).isEqualTo(listOf(parse("2018-12-01") to parse("2022-01-31")))
+    }
+
+    private fun periode(fomDato: LocalDate, tomDato: LocalDate, beløp: Float, opphørsdato: LocalDate? = null) =
+            InfotrygdPeriodeOvergangsstønad(ident, fomDato, tomDato, beløp, opphørsdato)
 
     private fun mockPdl(historiskIdent: String? = null) {
         val pdlIdenter = mutableListOf(PdlIdent(ident, false))

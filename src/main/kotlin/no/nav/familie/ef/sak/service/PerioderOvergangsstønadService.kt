@@ -24,19 +24,38 @@ class PerioderOvergangsstønadService(private val infotrygdReplikaClient: Infotr
         val personIdenter = hentPersonIdenter(request)
         val infotrygdRequest = InfotrygdPerioderOvergangsstønadRequest(personIdenter, request.fomDato, request.tomDato)
         val infotrygdPerioder = infotrygdReplikaClient.hentPerioderOvergangsstønad(infotrygdRequest)
-        val perioder = infotrygdPerioder.perioder.map {
+        val perioder = infotrygdPerioder.perioder.sortedBy { it.fomDato }.map {
+            val tomDato = it.opphørsdato?.let { opphørsdato -> if (opphørsdato.isBefore(it.tomDato)) opphørsdato else it.tomDato }
+                          ?: it.tomDato
             PeriodeOvergangsstønad(personIdent = it.personIdent,
                                    fomDato = it.fomDato,
-                                   tomDato = it.tomDato,
+                                   tomDato = tomDato,
                                    datakilde = PeriodeOvergangsstønad.Datakilde.INFOTRYGD)
         }
-        return PerioderOvergangsstønadResponse(perioder)
+        return PerioderOvergangsstønadResponse(slåSammenSammenhengendePerioder(perioder))
+    }
+
+    private fun slåSammenSammenhengendePerioder(perioder: List<PeriodeOvergangsstønad>): List<PeriodeOvergangsstønad> {
+        val mergedePerioder = mutableListOf<PeriodeOvergangsstønad>()
+        perioder.forEach {
+            if (mergedePerioder.isEmpty()) {
+                mergedePerioder.add(it)
+            } else {
+                val last = mergedePerioder.last()
+                if (last.tomDato.plusDays(1) == it.fomDato) {
+                    mergedePerioder[mergedePerioder.size - 1] = last.copy(tomDato = it.tomDato)
+                } else {
+                    mergedePerioder.add(it)
+                }
+            }
+        }
+        return mergedePerioder
     }
 
     private fun hentPersonIdenter(request: PerioderOvergangsstønadRequest): Set<String> {
         return try {
             pdlClient.hentPersonidenter(request.personIdent, true).identer.map { it.ident }.toSet()
-        } catch(e: PdlNotFoundException) {
+        } catch (e: PdlNotFoundException) {
             logger.warn("Finner ikke person, returnerer personIdent i request")
             setOf(request.personIdent)
         }

@@ -1,6 +1,7 @@
 package no.nav.familie.ef.sak.integration.dto.pdl
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import no.nav.familie.ef.sak.repository.domain.søknad.SøknadsskjemaOvergangsstønad
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -186,7 +187,9 @@ data class Dødsfall(@JsonProperty("doedsdato") val dødsdato: LocalDate?)
 
 data class Familierelasjon(val relatertPersonsIdent: String,
                            val relatertPersonsRolle: Familierelasjonsrolle,
-                           val minRolleForPerson: Familierelasjonsrolle?)
+                           val minRolleForPerson: Familierelasjonsrolle?) {
+    fun annenForelder(søknad: SøknadsskjemaOvergangsstønad) = this.relatertPersonsIdent != søknad.fødselsnummer && this.relatertPersonsRolle != Familierelasjonsrolle.BARN
+}
 
 enum class Familierelasjonsrolle {
     BARN,

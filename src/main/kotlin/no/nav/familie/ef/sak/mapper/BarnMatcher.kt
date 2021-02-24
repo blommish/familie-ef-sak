@@ -2,6 +2,7 @@ package no.nav.familie.ef.sak.mapper
 
 import no.nav.familie.ef.sak.integration.dto.pdl.PdlBarn
 import no.nav.familie.ef.sak.repository.domain.søknad.Barn
+import no.nav.familie.ef.sak.repository.domain.søknad.SøknadsskjemaOvergangsstønad
 import no.nav.familie.kontrakter.ef.søknad.Fødselsnummer
 import kotlin.math.abs
 
@@ -57,4 +58,7 @@ object BarnMatcher {
 
 }
 
-data class MatchetBarn(val fødselsnummer: String?, val pdlBarn: PdlBarn?, val søknadsbarn: Barn)
+data class MatchetBarn(val fødselsnummer: String?, val pdlBarn: PdlBarn?, val søknadsbarn: Barn) {
+    fun annenForelderIdent (søknad: SøknadsskjemaOvergangsstønad) = this.pdlBarn?.familierelasjoner?.firstOrNull { it.annenForelder(søknad) }?.relatertPersonsIdent
+                                ?: this.søknadsbarn.annenForelder?.person?.fødselsnummer
+}

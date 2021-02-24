@@ -4,11 +4,7 @@ import no.nav.familie.ef.sak.api.dto.BarnMedSamværDto
 import no.nav.familie.ef.sak.api.dto.BarnMedSamværRegistergrunnlagDto
 import no.nav.familie.ef.sak.api.dto.BarnMedSamværSøknadsgrunnlagDto
 import no.nav.familie.ef.sak.api.dto.AnnenForelderDto
-import no.nav.familie.ef.sak.integration.dto.pdl.Familierelasjonsrolle
-import no.nav.familie.ef.sak.integration.dto.pdl.PdlAnnenForelder
-import no.nav.familie.ef.sak.integration.dto.pdl.PdlBarn
-import no.nav.familie.ef.sak.integration.dto.pdl.gjeldende
-import no.nav.familie.ef.sak.integration.dto.pdl.visningsnavn
+import no.nav.familie.ef.sak.integration.dto.pdl.*
 import no.nav.familie.ef.sak.repository.domain.søknad.AnnenForelder
 import no.nav.familie.ef.sak.repository.domain.søknad.SøknadsskjemaOvergangsstønad
 import no.nav.familie.kontrakter.ef.søknad.Fødselsnummer
@@ -27,12 +23,8 @@ object BarnMedSamværMapper {
                 }
 
         return alleBarn.map { barn ->
-            val fnr = barn.pdlBarn?.familierelasjoner?.firstOrNull {
-                it.relatertPersonsIdent != søknad.fødselsnummer && it.relatertPersonsRolle != Familierelasjonsrolle.BARN
-            }?.relatertPersonsIdent
-                      ?: barn.søknadsbarn.annenForelder?.person?.fødselsnummer
+            val fnr = barn.annenForelderIdent(søknad)
             val pdlAnnenForelder = barneforeldre[fnr]
-
             tilDtoPerBarn(barn, pdlAnnenForelder, fnr)
         }
     }

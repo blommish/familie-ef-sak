@@ -164,6 +164,14 @@ class StegService(private val behandlingSteg: List<BehandlingSteg<*>>,
 
             logger.info("$stegType på behandling ${behandling.id} er håndtert")
             return returBehandling
+        } catch (exception: StegException) {
+            stegFeiletMetrics[stegType]?.increment()
+            val feil = "Håndtering av stegtype '$stegType' feilet på behandling ${behandling.id}."
+            when (exception.logLevel) {
+                StegException.LogLevel.ERROR -> logger.error(feil)
+                StegException.LogLevel.WARNING -> logger.warn(feil)
+            }
+            throw exception
         } catch (exception: Exception) {
             stegFeiletMetrics[stegType]?.increment()
             logger.error("Håndtering av stegtype '$stegType' feilet på behandling ${behandling.id}.")

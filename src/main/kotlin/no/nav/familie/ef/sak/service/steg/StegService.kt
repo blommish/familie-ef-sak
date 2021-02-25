@@ -11,7 +11,6 @@ import no.nav.familie.ef.sak.service.BehandlingService
 import no.nav.familie.ef.sak.service.BehandlingshistorikkService
 import no.nav.familie.ef.sak.service.steg.StegType.*
 import no.nav.familie.ef.sak.sikkerhet.SikkerhetContext
-import no.nav.familie.ef.sak.task.FerdigstillBehandlingTask
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -164,17 +163,12 @@ class StegService(private val behandlingSteg: List<BehandlingSteg<*>>,
 
             logger.info("$stegType på behandling ${behandling.id} er håndtert")
             return returBehandling
-        } catch (exception: StegException) {
-            stegFeiletMetrics[stegType]?.increment()
-            val feil = "Håndtering av stegtype '$stegType' feilet på behandling ${behandling.id}."
-            when (exception.logLevel) {
-                StegException.LogLevel.ERROR -> logger.error(feil)
-                StegException.LogLevel.WARNING -> logger.warn(feil)
-            }
+        } catch (exception: RekjørStegException) {
+            logger.info("Håndtering av stegtype=$stegType på behandling=${behandling.id} rekjører senere")
             throw exception
         } catch (exception: Exception) {
             stegFeiletMetrics[stegType]?.increment()
-            logger.error("Håndtering av stegtype '$stegType' feilet på behandling ${behandling.id}.")
+            logger.error("Håndtering av stegtype=$stegType på behandling=${behandling.id} feilet")
             throw exception
         }
     }

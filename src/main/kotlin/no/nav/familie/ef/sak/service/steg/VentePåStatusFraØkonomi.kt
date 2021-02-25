@@ -5,6 +5,7 @@ import no.nav.familie.ef.sak.service.TilkjentYtelseService
 import no.nav.familie.ef.sak.task.JournalførVedtaksbrevTask
 import no.nav.familie.kontrakter.felles.oppdrag.OppdragStatus
 import no.nav.familie.prosessering.domene.TaskRepository
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.UUID
 
@@ -17,9 +18,7 @@ class VentePåStatusFraØkonomi(private val tilkjentYtelseService: TilkjentYtels
         tilkjentYtelseService.hentStatus(behandling).let {
             when (it) {
                 OppdragStatus.KVITTERT_OK -> journalførVedtaksbrev(behandling)
-                else -> {
-                    prøvHentStatusPåNytt(status = it, behandingId = behandling.id)
-                }
+                else -> prøvHentStatusPåNytt(status = it, behandingId = behandling.id)
             }
         }
     }
@@ -29,8 +28,7 @@ class VentePåStatusFraØkonomi(private val tilkjentYtelseService: TilkjentYtels
     }
 
     fun prøvHentStatusPåNytt(status: OppdragStatus, behandingId: UUID) {
-        throw StegException(message = "Mottok status '$status' fra oppdrag for behandlingId $behandingId",
-                            logLevel = StegException.LogLevel.WARNING)
+        throw RekjørStegException("Mottok status '$status' fra oppdrag for behandlingId $behandingId")
     }
 
     override fun stegType(): StegType {

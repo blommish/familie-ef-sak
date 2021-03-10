@@ -19,7 +19,9 @@ class JournalførVedtaksbrevSteg(private val taskRepository: TaskRepository,
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
     override fun utførSteg(behandling: Behandling, data: Void?) {
+        logger.info("Forsøker å jornalføre vedtaksbrev")
         val journalpostId = vedtaksbrevService.journalførVedtaksbrev(behandling.id)
+        logger.info("Journalførte vedtaksbrev med journalpostId=[$journalpostId]")
         behandlingService.oppdaterJournalpostIdPåBehandling(journalpostId
                                                             ?: error("Feil ved journalføring av vedtaksbrev"),
                                                             Journalposttype.U,

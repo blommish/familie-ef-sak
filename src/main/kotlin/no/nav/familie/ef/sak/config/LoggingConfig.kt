@@ -17,7 +17,7 @@ class LoggingConfig {
     }
 
     @Around("monitor()") fun profile(pjp: ProceedingJoinPoint): Any? {
-        val logger = LoggerFactory.getLogger(pjp.target.javaClass)
+        val logger = LoggerFactory.getLogger(pjp.signature.declaringType)
         val start = System.currentTimeMillis()
         try {
             return pjp.proceed()

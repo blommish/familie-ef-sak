@@ -6,19 +6,20 @@ import no.nav.familie.ef.sak.util.loggTid
 import no.nav.familie.http.client.HttpClientUtil
 import no.nav.familie.http.client.HttpRequestUtil
 import no.nav.familie.http.config.RestTemplateAzure
-import no.nav.familie.http.config.RestTemplateSts
 import no.nav.familie.http.interceptor.ApiKeyInjectingClientInterceptor
 import no.nav.familie.http.interceptor.ConsumerIdClientInterceptor
 import no.nav.familie.http.interceptor.MdcValuesPropagatingClientInterceptor
 import no.nav.familie.http.interceptor.StsBearerTokenClientInterceptor
 import no.nav.familie.http.sts.AccessTokenResponse
-import no.nav.familie.http.sts.StsAccessTokenFeilException
 import no.nav.familie.http.sts.StsRestClient
 import no.nav.familie.log.IdUtils
 import no.nav.familie.log.NavHttpHeaders
+import no.nav.familie.kontrakter.felles.objectMapper
 import no.nav.familie.log.filter.LogFilter
 import no.nav.familie.log.filter.RequestTimeFilter
 import no.nav.familie.log.mdc.MDCConstants
+import no.nav.security.token.support.client.core.http.OAuth2HttpClient
+import no.nav.security.token.support.client.spring.oauth2.DefaultOAuth2HttpClient
 import no.nav.security.token.support.client.spring.oauth2.EnableOAuth2Client
 import no.nav.security.token.support.core.configuration.ProxyAwareResourceRetriever
 import no.nav.security.token.support.spring.api.EnableJwtTokenValidation
@@ -29,11 +30,17 @@ import org.springframework.boot.SpringBootConfiguration
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.web.client.RestTemplateBuilder
 import org.springframework.boot.web.servlet.FilterRegistrationBean
-import org.springframework.context.annotation.*
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.ComponentScan
+import org.springframework.context.annotation.Import
+import org.springframework.context.annotation.Primary
+import org.springframework.context.annotation.Profile
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestOperations
 import java.io.IOException
+import org.springframework.web.client.RestTemplate
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -45,11 +52,12 @@ import java.time.temporal.ChronoUnit
 import java.util.Base64
 import java.util.concurrent.ExecutionException
 
+
 @SpringBootConfiguration
 @ConfigurationPropertiesScan
 @ComponentScan("no.nav.familie.prosessering", "no.nav.familie.ef.sak", "no.nav.familie.sikkerhet")
 @EnableJwtTokenValidation(ignore = ["org.springframework", "springfox.documentation.swagger"])
-@Import(RestTemplateAzure::class, RestTemplateSts::class, StsRestClient::class)
+@Import(RestTemplateAzure::class, StsBearerTokenClientInterceptor::class, StsRestClient::class)
 @EnableOAuth2Client(cacheEnabled = true)
 @EnableScheduling
 class ApplicationConfig {
@@ -77,21 +85,24 @@ class ApplicationConfig {
         return filterRegistration
     }
 
-    //Overskrever felles sin som bruker proxy, som ikke skal brukes på gcp
+    /**
+     * Overskrever felles sin som bruker proxy, som ikke skal brukes på gcp
+     */
     @Bean
     @Primary
     fun restTemplateBuilder(): RestTemplateBuilder {
+        val jackson2HttpMessageConverter = MappingJackson2HttpMessageConverter(objectMapper)
         return RestTemplateBuilder()
                 .setConnectTimeout(Duration.of(2, ChronoUnit.SECONDS))
-                .setReadTimeout(Duration.of(120, ChronoUnit.SECONDS))
+                .setReadTimeout(Duration.of(30, ChronoUnit.SECONDS))
+                .additionalMessageConverters(listOf(jackson2HttpMessageConverter) + RestTemplate().messageConverters)
     }
 
     @Bean("utenAuth")
     fun restTemplate(restTemplateBuilder: RestTemplateBuilder,
                      consumerIdClientInterceptor: ConsumerIdClientInterceptor): RestOperations {
-        return restTemplateBuilder
-                .additionalInterceptors(consumerIdClientInterceptor,
-                                        MdcValuesPropagatingClientInterceptor()).build()
+        return restTemplateBuilder.additionalInterceptors(consumerIdClientInterceptor,
+                                                          MdcValuesPropagatingClientInterceptor()).build()
     }
 
     @Bean
@@ -106,6 +117,8 @@ class ApplicationConfig {
                         consumerIdClientInterceptor: ConsumerIdClientInterceptor,
                         apiKeyInjectingClientInterceptor: ApiKeyInjectingClientInterceptor): RestOperations {
         return RestTemplateBuilder()
+                .setConnectTimeout(Duration.of(2, ChronoUnit.SECONDS))
+                .setReadTimeout(Duration.of(15, ChronoUnit.SECONDS))
                 .additionalInterceptors(consumerIdClientInterceptor,
                                         stsBearerTokenClientInterceptor,
                                         apiKeyInjectingClientInterceptor,
@@ -124,95 +137,21 @@ class ApplicationConfig {
         return proxyAwareResourceRetriever
     }
 
+    /**
+     * Overskrever OAuth2HttpClient som settes opp i token-support som ikke kan få med objectMapper fra felles
+     * pga .setVisibility(PropertyAccessor.SETTER, JsonAutoDetect.Visibility.NONE)
+     * og [OAuth2AccessTokenResponse] som burde settes med setters, då feltnavn heter noe annet enn feltet i json
+     */
+    @Bean
+    @Primary
+    fun oAuth2HttpClient(): OAuth2HttpClient {
+        return DefaultOAuth2HttpClient(RestTemplateBuilder()
+                                               .setConnectTimeout(Duration.of(2, ChronoUnit.SECONDS))
+                                               .setReadTimeout(Duration.of(4, ChronoUnit.SECONDS)))
+    }
+
     companion object {
 
         private const val API_KEY_HEADER = "x-nav-apiKey"
     }
-}
-
-@Component
-@Primary
-class StsRestClient(private val mapper: ObjectMapper,
-                    @Value("\${STS_URL}") private val stsUrl: URI,
-                    @Value("\${CREDENTIAL_USERNAME}") private val stsUsername: String,
-                    @Value("\${CREDENTIAL_PASSWORD}") private val stsPassword: String,
-                    @Value("\${STS_APIKEY:#{null}}") private val stsApiKey: String? = null) {
-
-    private val client: HttpClient = HttpClientUtil.create()
-
-    private var cachedToken: AccessTokenResponse? = null
-    private var refreshCachedTokenTidspunkt = LocalDateTime.now()
-
-    private val isTokenValid: Boolean
-        get() {
-            if (cachedToken == null) {
-                return false
-            }
-            log.debug("Skal refreshe token: {}. Tiden nå er: {}",
-                      refreshCachedTokenTidspunkt,
-                      LocalTime.now())
-
-            return refreshCachedTokenTidspunkt.isAfter(LocalDateTime.now())
-        }
-
-    val systemOIDCToken: String
-        get() {
-            if (isTokenValid) {
-                log.info("Henter token fra cache")
-                return cachedToken!!.access_token
-            }
-            log.info("Henter token fra STS")
-            val callId = MDC.get(MDCConstants.MDC_CALL_ID) ?: IdUtils.generateId()
-            val request =
-                    HttpRequestUtil.createRequest(basicAuth(stsUsername, stsPassword))
-                            .uri(stsUrl)
-                            .header("Content-Type", "application/json")
-                            .header(NavHttpHeaders.NAV_CALL_ID.asString(), callId)
-                            .POST(HttpRequest.BodyPublishers.noBody())
-                            .timeout(Duration.ofSeconds(30)).apply {
-                                if (!stsApiKey.isNullOrEmpty()) {
-                                    header("x-nav-apiKey", stsApiKey)
-                                }
-                            }.build()
-
-            val accessTokenResponse = loggTid(this::class, "systemOIDCToken", "hentToken") {
-                try {
-                    client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                            .thenApply { obj: HttpResponse<String?> -> obj.body() }
-                            .thenApply { it: String? ->
-                                håndterRespons(it)
-                            }
-                            .get()
-                } catch (e: InterruptedException) {
-                    throw StsAccessTokenFeilException("Feil i tilkobling", e)
-                } catch (e: ExecutionException) {
-                    throw StsAccessTokenFeilException("Feil i tilkobling", e)
-                }
-            }
-            if (accessTokenResponse != null) {
-                cachedToken = accessTokenResponse
-                refreshCachedTokenTidspunkt = LocalDateTime.now()
-                        .plusSeconds(accessTokenResponse.expires_in)
-                        .minusSeconds(accessTokenResponse.expires_in / 4) // Trekker av 1/4. Refresher etter 3/4 av levetiden
-                return accessTokenResponse.access_token
-            }
-            throw StsAccessTokenFeilException("Manglende token")
-        }
-
-    private fun håndterRespons(it: String?): AccessTokenResponse {
-        return try {
-            mapper.readValue(it, AccessTokenResponse::class.java)
-        } catch (e: IOException) {
-            throw StsAccessTokenFeilException("Parsing av respons feilet", e)
-        }
-    }
-
-    companion object {
-
-        private val log = LoggerFactory.getLogger(StsRestClient::class.java)
-        private fun basicAuth(username: String, password: String): String {
-            return "Basic " + Base64.getEncoder().encodeToString("$username:$password".toByteArray())
-        }
-    }
-
 }

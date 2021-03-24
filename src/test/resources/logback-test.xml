@@ -9,4 +9,5 @@
 
     <logger name="no" level="INFO"/>
     <logger name="no.nav.familie.ef.sak" level="DEBUG"/>
+    <logger name="org.springframework.jdbc.core.JdbcTemplate" level="DEBUG"/>
 </configuration>

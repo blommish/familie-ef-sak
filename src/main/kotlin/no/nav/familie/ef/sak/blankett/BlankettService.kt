@@ -3,6 +3,7 @@ package no.nav.familie.ef.sak.blankett
 import no.nav.familie.ef.sak.repository.OppgaveRepository
 import no.nav.familie.ef.sak.repository.domain.*
 import no.nav.familie.ef.sak.service.*
+import no.nav.familie.ef.sak.util.loggTid
 import no.nav.familie.kontrakter.felles.oppgave.Oppgavetype
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
@@ -41,8 +42,8 @@ class BlankettService(private val tilgangService: TilgangService,
     fun lagBlankett(behandlingId: UUID): ByteArray {
         val blankettPdfRequest = BlankettPdfRequest(lagPersonopplysningerDto(behandlingId),
                                                     hentVilkårDto(behandlingId))
-        val blankettPdfAsByteArray = blankettClient.genererBlankett(blankettPdfRequest)
-        oppdaterBlankett(behandlingId, blankettPdfAsByteArray)
+        val blankettPdfAsByteArray = loggTid(this::class, "lagBlankett", "genererBlankett"){blankettClient.genererBlankett(blankettPdfRequest)}
+        loggTid(this::class, "lagBlankett", "oppdaterBlankett"){oppdaterBlankett(behandlingId, blankettPdfAsByteArray)}
         return blankettPdfAsByteArray
     }
 

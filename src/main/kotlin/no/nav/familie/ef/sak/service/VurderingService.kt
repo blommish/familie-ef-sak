@@ -19,6 +19,7 @@ import no.nav.familie.ef.sak.repository.domain.VilkårType
 import no.nav.familie.ef.sak.repository.domain.Vilkårsresultat
 import no.nav.familie.ef.sak.repository.domain.Vilkårsvurdering
 import no.nav.familie.ef.sak.repository.findByIdOrThrow
+import no.nav.familie.ef.sak.util.loggTid
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import java.util.UUID
@@ -67,11 +68,12 @@ class VurderingService(private val behandlingService: BehandlingService,
     }
 
     fun hentVilkår(behandlingId: UUID): VilkårDto {
-        val søknad = behandlingService.hentOvergangsstønad(behandlingId)
-        val grunnlag = grunnlagsdataService.hentGrunnlag(behandlingId, søknad)
+        val søknad =
+                loggTid(this::class, "hentVilkår", "hentOvergangsstønad") { behandlingService.hentOvergangsstønad(behandlingId) }
+        val grunnlag = loggTid(this::class, "hentVilkår", "hentGrunnlag") { grunnlagsdataService.hentGrunnlag(behandlingId, søknad) }
         val metadata = HovedregelMetadata(sivilstandstype = grunnlag.sivilstand.registergrunnlag.type,
                                           søknad = søknad)
-        val vurderinger = hentVurderinger(behandlingId, metadata)
+        val vurderinger = loggTid(this::class, "hentVilkår", "hentVurderinger") { hentVurderinger(behandlingId, metadata) }
         return VilkårDto(vurderinger = vurderinger, grunnlag = grunnlag)
     }
 

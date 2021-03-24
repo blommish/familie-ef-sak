@@ -12,6 +12,7 @@ import no.nav.familie.ef.sak.integration.dto.pdl.MotpartsRolle
 import no.nav.familie.ef.sak.integration.dto.pdl.gjeldende
 import no.nav.familie.ef.sak.integration.dto.pdl.visningsnavn
 import no.nav.familie.ef.sak.mapper.PersonopplysningerMapper
+import no.nav.familie.ef.sak.util.loggTid
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
@@ -23,23 +24,25 @@ class PersonopplysningerService(private val personService: PersonService,
     private val logger = LoggerFactory.getLogger(this::class.java)
 
     fun hentPersonopplysninger(ident: String): PersonopplysningerDto {
-        return runBlocking {
-            val egenAnsattDeferred = async { familieIntegrasjonerClient.egenAnsatt(ident) }
-            val personMedRelasjoner = withContext(Dispatchers.Default) { personService.hentPersonMedRelasjoner(ident) }
+        return loggTid(this::class, "hentPersonopplysninger") {
+            runBlocking {
+                val egenAnsattDeferred = async { familieIntegrasjonerClient.egenAnsatt(ident) }
+                val personMedRelasjoner = withContext(Dispatchers.Default) { personService.hentPersonMedRelasjoner(ident) }
 
-            val fullmakter = personMedRelasjoner.søker.fullmakt.filter { it.motpartsRolle == MotpartsRolle.FULLMEKTIG }
+                val fullmakter = personMedRelasjoner.søker.fullmakt.filter { it.motpartsRolle == MotpartsRolle.FULLMEKTIG }
 
-            val identer = fullmakter.map { it.motpartsPersonident } +
-                          personMedRelasjoner.søker.sivilstand.mapNotNull { it.relatertVedSivilstand }
-                                  .filterNot { it.endsWith("00000") }
-            val identNavn = hentGjeldeneNavn(identer + andreForelderIdenter(personMedRelasjoner))
-            personopplysningerMapper.tilPersonopplysninger(
-                    personMedRelasjoner,
-                    ident,
-                    fullmakter,
-                    egenAnsattDeferred.await(),
-                    identNavn
-            )
+                val identer = fullmakter.map { it.motpartsPersonident } +
+                              personMedRelasjoner.søker.sivilstand.mapNotNull { it.relatertVedSivilstand }
+                                      .filterNot { it.endsWith("00000") }
+                val identNavn = hentGjeldeneNavn(identer + andreForelderIdenter(personMedRelasjoner))
+                personopplysningerMapper.tilPersonopplysninger(
+                        personMedRelasjoner,
+                        ident,
+                        fullmakter,
+                        egenAnsattDeferred.await(),
+                        identNavn
+                )
+            }
         }
     }
 

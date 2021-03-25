@@ -1,5 +1,8 @@
 package no.nav.familie.ef.sak.blankett
 
+import no.nav.familie.ef.sak.api.beregning.VedtakDto
+import no.nav.familie.ef.sak.api.beregning.VedtakService
+import no.nav.familie.ef.sak.api.dto.SøknadDatoerDto
 import no.nav.familie.ef.sak.repository.OppgaveRepository
 import no.nav.familie.ef.sak.repository.domain.*
 import no.nav.familie.ef.sak.service.*
@@ -18,7 +21,8 @@ class BlankettService(private val tilgangService: TilgangService,
                       private val behandlingService: BehandlingService,
                       private val fagsakService: FagsakService,
                       private val personopplysningerService: PersonopplysningerService,
-                      private val oppgaveRepository: OppgaveRepository) {
+                      private val oppgaveRepository: OppgaveRepository,
+                      private val vedtakService: VedtakService) {
 
     fun opprettBlankettBehandling(journalpostId: String, oppgaveId: Long): Behandling {
         val journalpost = journalføringService.hentJournalpost(journalpostId)
@@ -41,8 +45,11 @@ class BlankettService(private val tilgangService: TilgangService,
 
     fun lagBlankett(behandlingId: UUID): ByteArray {
         val blankettPdfRequest = BlankettPdfRequest(lagPersonopplysningerDto(behandlingId),
-                                                    hentVilkårDto(behandlingId))
-        val blankettPdfAsByteArray = loggTid(this::class, "lagBlankett", "genererBlankett"){blankettClient.genererBlankett(blankettPdfRequest)}
+                                                    hentVilkårDto(behandlingId),
+                                                    lagVedtakDto(behandlingId),
+                                                    lagSøknadsdatoer(behandlingId)
+        )
+        val blankettPdfAsByteArray = blankettClient.genererBlankett(blankettPdfRequest)
         loggTid(this::class, "lagBlankett", "oppdaterBlankett"){oppdaterBlankett(behandlingId, blankettPdfAsByteArray)}
         return blankettPdfAsByteArray
     }
@@ -57,9 +64,29 @@ class BlankettService(private val tilgangService: TilgangService,
 
     private fun hentVilkårDto(behandlingId: UUID) = vurderingService.hentVilkår(behandlingId)
 
+    private fun lagSøknadsdatoer(behandlingId: UUID) : SøknadDatoerDto {
+        val overgangsstønad = behandlingService.hentOvergangsstønad(behandlingId)
+        return SøknadDatoerDto(
+                søknadsdato = overgangsstønad.datoMottatt,
+                søkerStønadFra = overgangsstønad.søkerFra
+        )
+
+    }
+
     private fun lagPersonopplysningerDto(behandlingId: UUID): PersonopplysningerDto {
         val ident = fagsakService.hentFagsak(behandlingService.hentBehandling(behandlingId).fagsakId).hentAktivIdent()
         return PersonopplysningerDto(hentGjeldendeNavn(ident), ident)
+    }
+
+    private fun lagVedtakDto(behandlingId: UUID): VedtakDto {
+        return vedtakService.hentVedtak(behandlingId)
+                .let {
+                    VedtakDto(it.resultatType,
+                              it.periodeBegrunnelse,
+                              it.inntektBegrunnelse,
+                              it.perioder.perioder,
+                              it.inntekter.inntekter)
+                }
     }
 
     private fun hentGjeldendeNavn(hentAktivIdent: String): String {

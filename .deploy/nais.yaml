@@ -42,6 +42,7 @@ spec:
             envVarPrefix: DB
             diskAutoresize: true
             tier: db-g1-small
+            cascadingDelete: false
   accessPolicy:
     inbound:
       rules:

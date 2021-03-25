@@ -2,7 +2,7 @@ package no.nav.familie.ef.sak.service.steg
 
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.Metrics
-import no.nav.familie.ef.sak.api.beregning.VedtakRequest
+import no.nav.familie.ef.sak.api.beregning.VedtakDto
 import no.nav.familie.ef.sak.api.dto.BeslutteVedtakDto
 import no.nav.familie.ef.sak.api.dto.TilkjentYtelseDTO
 import no.nav.familie.ef.sak.blankett.BlankettSteg
@@ -20,11 +20,8 @@ import no.nav.familie.ef.sak.service.steg.StegType.FERDIGSTILLE_BEHANDLING
 import no.nav.familie.ef.sak.service.steg.StegType.IVERKSETT_MOT_OPPDRAG
 import no.nav.familie.ef.sak.service.steg.StegType.JOURNALFØR_BLANKETT
 import no.nav.familie.ef.sak.service.steg.StegType.JOURNALFØR_VEDTAKSBREV
-import no.nav.familie.ef.sak.service.steg.StegType.REGISTRERE_OPPLYSNINGER
 import no.nav.familie.ef.sak.service.steg.StegType.SEND_TIL_BESLUTTER
 import no.nav.familie.ef.sak.service.steg.StegType.VENTE_PÅ_STATUS_FRA_ØKONOMI
-import no.nav.familie.ef.sak.service.steg.StegType.VILKÅRSVURDERE_INNGANGSVILKÅR
-import no.nav.familie.ef.sak.service.steg.StegType.VILKÅRSVURDERE_STØNAD
 import no.nav.familie.ef.sak.service.steg.StegType.VEDTA_BLANKETT
 import no.nav.familie.ef.sak.sikkerhet.SikkerhetContext
 import org.slf4j.Logger
@@ -48,20 +45,8 @@ class StegService(private val behandlingSteg: List<BehandlingSteg<*>>,
     private val stegFeiletMetrics: Map<StegType, Counter> = initStegMetrikker("feil")
 
     @Transactional
-    fun håndterRegistrerOpplysninger(behandling: Behandling, søknad: String?): Behandling {
-        val behandlingSteg: RegistrereOpplysningerSteg = hentBehandlingSteg(REGISTRERE_OPPLYSNINGER)
-        return håndterSteg(behandling, behandlingSteg, søknad)
-    }
-
-    @Transactional
-    fun håndterInngangsvilkår(behandling: Behandling): Behandling {
-        val behandlingSteg: InngangsvilkårSteg = hentBehandlingSteg(VILKÅRSVURDERE_INNGANGSVILKÅR)
-        return håndterSteg(behandling, behandlingSteg, null)
-    }
-
-    @Transactional
-    fun håndterStønadsvilkår(behandling: Behandling): Behandling {
-        val behandlingSteg: StønadsvilkårSteg = hentBehandlingSteg(VILKÅRSVURDERE_STØNAD)
+    fun håndterVilkår(behandling: Behandling): Behandling {
+        val behandlingSteg: VilkårSteg = hentBehandlingSteg(StegType.VILKÅR)
         return håndterSteg(behandling, behandlingSteg, null)
     }
 
@@ -72,9 +57,9 @@ class StegService(private val behandlingSteg: List<BehandlingSteg<*>>,
     }
 
     @Transactional
-    fun håndterVedtaBlankett(behandling: Behandling, vedtakRequest: VedtakRequest): Behandling {
+    fun håndterVedtaBlankett(behandling: Behandling, vedtak: VedtakDto): Behandling {
         val behandlingSteg: VedtaBlankettSteg = hentBehandlingSteg(VEDTA_BLANKETT)
-        return håndterSteg(behandling, behandlingSteg, vedtakRequest)
+        return håndterSteg(behandling, behandlingSteg, vedtak)
     }
 
     @Transactional

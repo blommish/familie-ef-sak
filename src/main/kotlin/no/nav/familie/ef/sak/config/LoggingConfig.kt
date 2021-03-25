@@ -1,5 +1,6 @@
 package no.nav.familie.ef.sak.config
 
+import no.nav.familie.ef.sak.sikkerhet.SikkerhetContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
@@ -22,8 +23,25 @@ class LoggingConfig {
         try {
             return pjp.proceed()
         } finally {
-            val elapsedTime = System.currentTimeMillis() - start
-            logger.info("Timer aop - ${pjp.signature.declaringType.simpleName}.${pjp.signature.name} - time:$elapsedTime")
+            if (SikkerhetContext.hentSaksbehandler() == "Z994230") {
+                val elapsedTime = System.currentTimeMillis() - start
+                logger.info("Timer aop - ${pjp.signature.declaringType.simpleName}.${pjp.signature.name} - time:$elapsedTime")
+            }
+        }
+    }
+
+    @Pointcut("execution(* org.springframework.jdbc.core.JdbcOperations.*(..))")
+    fun monitor2() {}
+    @Around("monitor2()") fun profile2(pjp: ProceedingJoinPoint): Any? {
+        val logger = LoggerFactory.getLogger(pjp.signature.declaringType)
+        val start = System.currentTimeMillis()
+        try {
+            return pjp.proceed()
+        } finally {
+            if (SikkerhetContext.hentSaksbehandler() == "Z994230") {
+                val elapsedTime = System.currentTimeMillis() - start
+                logger.info("Timer aop - ${pjp.signature.declaringType.simpleName}.${pjp.signature.name} - time:$elapsedTime")
+            }
         }
     }
 }

@@ -11,6 +11,7 @@ import no.nav.familie.ef.sak.repository.domain.søknad.SøknadsskjemaOvergangsst
 import no.nav.familie.ef.sak.repository.domain.søknad.SøknadsskjemaSkolepenger
 import no.nav.familie.ef.sak.service.steg.StegType
 import no.nav.familie.ef.sak.sikkerhet.SikkerhetContext
+import no.nav.familie.ef.sak.util.loggTid
 import no.nav.familie.kontrakter.felles.journalpost.Journalpost
 import no.nav.familie.kontrakter.felles.journalpost.Journalposttype
 import org.slf4j.Logger
@@ -90,8 +91,8 @@ class BehandlingService(private val søknadRepository: SøknadRepository,
     fun hentBehandling(behandlingId: UUID): Behandling = behandlingRepository.findByIdOrThrow(behandlingId)
 
     fun hentOvergangsstønad(behandlingId: UUID): SøknadsskjemaOvergangsstønad {
-        val søknad = hentSøknad(behandlingId)
-        return søknadOvergangsstønadRepository.findByIdOrThrow(søknad.soknadsskjemaId)
+        val søknad = loggTid(this::class, "hentOvergangsstønad", "hentSøknad") {hentSøknad(behandlingId)}
+        return loggTid(this::class, "hentOvergangsstønad", "findByIdOrThrow") {søknadOvergangsstønadRepository.findByIdOrThrow(søknad.soknadsskjemaId)}
     }
 
     fun hentSkolepenger(behandlingId: UUID): SøknadsskjemaSkolepenger {

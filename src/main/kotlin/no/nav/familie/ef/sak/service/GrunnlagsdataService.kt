@@ -18,6 +18,7 @@ import no.nav.familie.ef.sak.repository.domain.RegistergrunnlagData
 import no.nav.familie.ef.sak.repository.domain.Registergrunnlagsendringer
 import no.nav.familie.ef.sak.repository.domain.søknad.SøknadsskjemaOvergangsstønad
 import no.nav.familie.ef.sak.repository.findByIdOrThrow
+import no.nav.familie.ef.sak.util.loggTid
 import no.nav.familie.kontrakter.ef.søknad.Fødselsnummer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -68,7 +69,7 @@ class GrunnlagsdataService(private val registergrunnlagRepository: Registergrunn
 
         val sagtOppEllerRedusertStilling = SagtOppEllerRedusertStillingMapper.tilDto(situasjon = søknad.situasjon)
 
-        val aktivitet = AktivitetMapper.tilDto(aktivitet = søknad.aktivitet, situasjon = søknad.situasjon, barn = søknad.barn )
+        val aktivitet = AktivitetMapper.tilDto(aktivitet = søknad.aktivitet, situasjon = søknad.situasjon, barn = søknad.barn)
         return VilkårGrunnlagDto(medlemskap = medlemskap,
                                  sivilstand = sivilstand,
                                  bosituasjon = BosituasjonMapper.tilDto(søknad.bosituasjon),
@@ -89,8 +90,11 @@ class GrunnlagsdataService(private val registergrunnlagRepository: Registergrunn
     }
 
     fun hentEndringerIRegistergrunnlag(behandlingId: UUID): Registergrunnlagsendringer {
-        val registergrunnlag = hentEllerOpprettRegistergrunnlag(behandlingId)
-        return finnEndringerIRegistergrunnlag(registergrunnlag)
+        val registergrunnlag = loggTid(this::class, "hentEndringerIRegistergrunnlag", "hentEllerOpprettRegistergrunnlag") {
+            hentEllerOpprettRegistergrunnlag(behandlingId) }
+        return loggTid(this::class, "hentEndringerIRegistergrunnlag", "finnEndringerIRegistergrunnlag") {
+            finnEndringerIRegistergrunnlag(registergrunnlag)
+        }
     }
 
     private fun hentEllerOpprettRegistergrunnlag(behandlingId: UUID): Registergrunnlag {

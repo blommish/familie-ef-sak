@@ -10,7 +10,8 @@ fun <T> loggTid(clazz: KClass<out Any>, method: String, callName: String = "", f
     val start = System.currentTimeMillis()
     val result = fn.invoke()
     if (SikkerhetContext.hentSaksbehandler() == "Z994230") {
-        logger.info("Timer - class=${clazz.simpleName} method=$method call=$callName time=${System.currentTimeMillis() - start}")
+        val time = System.currentTimeMillis() - start
+        logger.info("Timer ${if (time > 50) "SLOW" else ""} - class=${clazz.simpleName} method=$method call=$callName time=$time")
     }
     return result
 }

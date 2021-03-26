@@ -1,32 +1,24 @@
 package no.nav.familie.ef.sak.config
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import no.nav.familie.ef.sak.util.loggTid
-import no.nav.familie.http.client.HttpClientUtil
-import no.nav.familie.http.client.HttpRequestUtil
 import no.nav.familie.http.config.RestTemplateAzure
 import no.nav.familie.http.interceptor.ApiKeyInjectingClientInterceptor
 import no.nav.familie.http.interceptor.ConsumerIdClientInterceptor
 import no.nav.familie.http.interceptor.MdcValuesPropagatingClientInterceptor
 import no.nav.familie.http.interceptor.StsBearerTokenClientInterceptor
-import no.nav.familie.http.sts.AccessTokenResponse
 import no.nav.familie.http.sts.StsRestClient
-import no.nav.familie.log.IdUtils
-import no.nav.familie.log.NavHttpHeaders
 import no.nav.familie.kontrakter.felles.objectMapper
 import no.nav.familie.log.filter.LogFilter
 import no.nav.familie.log.filter.RequestTimeFilter
-import no.nav.familie.log.mdc.MDCConstants
 import no.nav.security.token.support.client.core.http.OAuth2HttpClient
 import no.nav.security.token.support.client.spring.oauth2.DefaultOAuth2HttpClient
 import no.nav.security.token.support.client.spring.oauth2.EnableOAuth2Client
 import no.nav.security.token.support.core.configuration.ProxyAwareResourceRetriever
 import no.nav.security.token.support.spring.api.EnableJwtTokenValidation
 import org.slf4j.LoggerFactory
-import org.slf4j.MDC
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.SpringBootConfiguration
+import org.springframework.boot.actuate.metrics.web.client.MetricsRestTemplateCustomizer
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.web.client.RestTemplateBuilder
 import org.springframework.boot.web.servlet.FilterRegistrationBean
@@ -37,20 +29,11 @@ import org.springframework.context.annotation.Primary
 import org.springframework.context.annotation.Profile
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
 import org.springframework.scheduling.annotation.EnableScheduling
-import org.springframework.stereotype.Component
 import org.springframework.web.client.RestOperations
-import java.io.IOException
 import org.springframework.web.client.RestTemplate
 import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.time.Duration
-import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.temporal.ChronoUnit
-import java.util.Base64
-import java.util.concurrent.ExecutionException
 
 
 @SpringBootConfiguration
@@ -90,9 +73,9 @@ class ApplicationConfig {
      */
     @Bean
     @Primary
-    fun restTemplateBuilder(): RestTemplateBuilder {
+    fun restTemplateBuilder(metricsCustomizer: MetricsRestTemplateCustomizer): RestTemplateBuilder {
         val jackson2HttpMessageConverter = MappingJackson2HttpMessageConverter(objectMapper)
-        return RestTemplateBuilder()
+        return RestTemplateBuilder(metricsCustomizer)
                 .setConnectTimeout(Duration.of(2, ChronoUnit.SECONDS))
                 .setReadTimeout(Duration.of(30, ChronoUnit.SECONDS))
                 .additionalMessageConverters(listOf(jackson2HttpMessageConverter) + RestTemplate().messageConverters)
@@ -113,10 +96,11 @@ class ApplicationConfig {
     }
 
     @Bean("stsMedApiKey")
-    fun restTemplateSts(stsBearerTokenClientInterceptor: StsBearerTokenClientInterceptor,
+    fun restTemplateSts(metricsCustomizer: MetricsRestTemplateCustomizer,
+                        stsBearerTokenClientInterceptor: StsBearerTokenClientInterceptor,
                         consumerIdClientInterceptor: ConsumerIdClientInterceptor,
                         apiKeyInjectingClientInterceptor: ApiKeyInjectingClientInterceptor): RestOperations {
-        return RestTemplateBuilder()
+        return RestTemplateBuilder(metricsCustomizer)
                 .setConnectTimeout(Duration.of(2, ChronoUnit.SECONDS))
                 .setReadTimeout(Duration.of(15, ChronoUnit.SECONDS))
                 .additionalInterceptors(consumerIdClientInterceptor,
@@ -144,8 +128,8 @@ class ApplicationConfig {
      */
     @Bean
     @Primary
-    fun oAuth2HttpClient(): OAuth2HttpClient {
-        return DefaultOAuth2HttpClient(RestTemplateBuilder()
+    fun oAuth2HttpClient(metricsCustomizer: MetricsRestTemplateCustomizer): OAuth2HttpClient {
+        return DefaultOAuth2HttpClient(RestTemplateBuilder(metricsCustomizer)
                                                .setConnectTimeout(Duration.of(2, ChronoUnit.SECONDS))
                                                .setReadTimeout(Duration.of(4, ChronoUnit.SECONDS)))
     }

@@ -13,15 +13,20 @@ import no.nav.familie.ef.sak.regler.alleVilkårsregler
 import no.nav.familie.ef.sak.regler.evalutation.OppdaterVilkår
 import no.nav.familie.ef.sak.regler.hentVilkårsregel
 import no.nav.familie.ef.sak.repository.VilkårsvurderingRepository
-import no.nav.familie.ef.sak.repository.domain.*
+import no.nav.familie.ef.sak.repository.domain.Behandling
+import no.nav.familie.ef.sak.repository.domain.Delvilkårsvurdering
+import no.nav.familie.ef.sak.repository.domain.DelvilkårsvurderingWrapper
+import no.nav.familie.ef.sak.repository.domain.VilkårType
+import no.nav.familie.ef.sak.repository.domain.Vilkårsresultat
+import no.nav.familie.ef.sak.repository.domain.Vilkårsvurdering
 import no.nav.familie.ef.sak.repository.findByIdOrThrow
-import no.nav.familie.ef.sak.util.loggTid
 import no.nav.familie.ef.sak.service.steg.StegService
 import no.nav.familie.ef.sak.service.steg.StegType
+import no.nav.familie.ef.sak.util.loggTid
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.*
+import java.util.UUID
 
 @Service
 class VurderingService(private val behandlingService: BehandlingService,
@@ -76,7 +81,8 @@ class VurderingService(private val behandlingService: BehandlingService,
     fun hentVilkår(behandlingId: UUID): VilkårDto {
         val søknad =
                 loggTid(this::class, "hentVilkår", "hentOvergangsstønad") { behandlingService.hentOvergangsstønad(behandlingId) }
-        val grunnlag = loggTid(this::class, "hentVilkår", "hentGrunnlag") { grunnlagsdataService.hentGrunnlag(behandlingId, søknad) }
+        val grunnlag =
+                loggTid(this::class, "hentVilkår", "hentGrunnlag") { grunnlagsdataService.hentGrunnlag(behandlingId, søknad) }
         val metadata = HovedregelMetadata(sivilstandstype = grunnlag.sivilstand.registergrunnlag.type,
                                           søknad = søknad)
         val vurderinger = loggTid(this::class, "hentVilkår", "hentVurderinger") { hentVurderinger(behandlingId, metadata) }
@@ -116,7 +122,9 @@ class VurderingService(private val behandlingService: BehandlingService,
         }
 
         if (lagredeVilkårsvurderinger.isEmpty()) {
-            return opprettNyeVilkårsvurderinger(behandlingId, metadata)
+            return loggTid(this::class, "hentEllerOpprettVurderingerForVilkår", "opprettNyeVilkårsvurderinger") {
+                opprettNyeVilkårsvurderinger(behandlingId, metadata)
+            }
         } else {
             return lagredeVilkårsvurderinger
         }
@@ -185,9 +193,9 @@ class VurderingService(private val behandlingService: BehandlingService,
     }
 
     private fun skalTilbakestilleTilVilkårSteg(vilkårsvurdering: List<VilkårType>, behandling: Behandling) =
-        vilkårsvurdering.isNotEmpty() && behandling.steg != StegType.VILKÅR
+            vilkårsvurdering.isNotEmpty() && behandling.steg != StegType.VILKÅR
 
     private fun skalFerdigstilleVilkårSteg(vilkårsvurdering: List<VilkårType>, behandling: Behandling) =
-        vilkårsvurdering.isEmpty() && behandling.steg == StegType.VILKÅR
+            vilkårsvurdering.isEmpty() && behandling.steg == StegType.VILKÅR
 
 }

@@ -8,6 +8,7 @@ import no.nav.familie.ef.sak.regler.Vilkårsregler
 import no.nav.familie.ef.sak.service.BehandlingService
 import no.nav.familie.ef.sak.service.TilgangService
 import no.nav.familie.ef.sak.service.VurderingService
+import no.nav.familie.ef.sak.util.loggTid
 import no.nav.familie.kontrakter.felles.Ressurs
 import no.nav.familie.kontrakter.felles.objectMapper
 import no.nav.security.token.support.core.api.ProtectedWithClaims
@@ -42,7 +43,9 @@ class VurderingController(private val vurderingService: VurderingService,
             : Ressurs<VilkårsvurderingDto> {
         tilgangService.validerTilgangTilBehandling(vilkårsvurdering.behandlingId)
         try {
-            return Ressurs.success(vurderingService.oppdaterVilkår(vilkårsvurdering))
+            return loggTid(this::class, "oppdaterVurderingVilkår") {
+                Ressurs.success(vurderingService.oppdaterVilkår(vilkårsvurdering))
+            }
         } catch (e: Exception) {
             val delvilkårJson = objectMapper.writeValueAsString(vilkårsvurdering.delvilkårsvurderinger)
             secureLogger.warn("id=${vilkårsvurdering.id}" +

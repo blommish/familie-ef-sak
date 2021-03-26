@@ -13,16 +13,12 @@ import org.springframework.context.annotation.Configuration
 @Aspect
 class LoggingConfig {
 
-    @Pointcut("execution(public * org.springframework.data.repository.Repository+.*(..)) " +
-              "|| execution(public * no.nav.familie.http.client.AbstractRestClient+.*(..))") fun monitor() {
+    @Pointcut("execution(public * org.springframework.data.repository.Repository+.*(..))") fun monitor() {
     }
 
     @Around("monitor()") fun profile(pjp: ProceedingJoinPoint): Any? {
         val logger = LoggerFactory.getLogger(pjp.signature.declaringType)
         val start = System.currentTimeMillis()
-        if (SikkerhetContext.hentSaksbehandler() == "Z994230") {
-            logger.info("Timer start")
-        }
         try {
             return pjp.proceed()
         } finally {
@@ -35,26 +31,15 @@ class LoggingConfig {
                 val methodName = stackTrace.indexOf(callingClass).takeIf { it > -1 }?.let { stackTrace[it - 1].methodName }
 
                 if (elapsedTime > 50) {
-                    logger.info("Timer aop SLOW - ${pjp.signature.declaringType.simpleName}.${pjp.signature.name} - time=$elapsedTime - a=${callingClass?.fileName} ${callingClass?.methodName} $methodName")
+                    logger.info("Timer aop slow - ${pjp.signature.declaringType.simpleName}.${pjp.signature.name} - time=$elapsedTime - ${callingClass?.fileName} ${callingClass?.methodName} $methodName")
                 } else {
-                    logger.info("Timer aop - ${pjp.signature.declaringType.simpleName}.${pjp.signature.name} - time=$elapsedTime - a=${callingClass?.fileName} ${callingClass?.methodName} $methodName")
+                    logger.info("Timer aop - ${pjp.signature.declaringType.simpleName}.${pjp.signature.name} - time=$elapsedTime - ${callingClass?.fileName} ${callingClass?.methodName} $methodName")
                 }
             }
         }
     }
 
-    @Pointcut("execution(* org.springframework.jdbc.datasource.DataSourceUtils.*(..))")
-    fun monitor3() {
-    }
-
-    @Around("monitor3()")
-    fun profile3(pjp: ProceedingJoinPoint): Any? {
-        return pjp.proceed()
-    }
-
-
-    @Pointcut("execution(* org.springframework.jdbc.core.JdbcOperations.*(..))")
-    fun monitor2() {
+    @Pointcut("execution(public * no.nav.familie.http.client.AbstractRestClient+.*(..))") fun monitor2() {
     }
 
     @Around("monitor2()") fun profile2(pjp: ProceedingJoinPoint): Any? {
@@ -65,7 +50,11 @@ class LoggingConfig {
         } finally {
             if (SikkerhetContext.hentSaksbehandler() == "Z994230") {
                 val elapsedTime = System.currentTimeMillis() - start
-                logger.info("Timer aop - ${pjp.signature.declaringType.simpleName}.${pjp.signature.name} - time=$elapsedTime")
+                if (elapsedTime > 50) {
+                    logger.info("Timer aop slow - ${pjp.signature.declaringType.simpleName}.${pjp.signature.name} - time=$elapsedTime")
+                } else {
+                    logger.info("Timer aop - ${pjp.signature.declaringType.simpleName}.${pjp.signature.name} - time=$elapsedTime")
+                }
             }
         }
     }

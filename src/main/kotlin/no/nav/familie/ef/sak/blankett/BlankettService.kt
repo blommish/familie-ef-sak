@@ -10,6 +10,7 @@ import no.nav.familie.ef.sak.util.loggTid
 import no.nav.familie.kontrakter.felles.oppgave.Oppgavetype
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
 @Service
@@ -24,6 +25,7 @@ class BlankettService(private val tilgangService: TilgangService,
                       private val oppgaveRepository: OppgaveRepository,
                       private val vedtakService: VedtakService) {
 
+    @Transactional
     fun opprettBlankettBehandling(journalpostId: String, oppgaveId: Long): Behandling {
         val journalpost = journalføringService.hentJournalpost(journalpostId)
         val personIdent = journalføringService.hentIdentForJournalpost(journalpost)
@@ -62,7 +64,7 @@ class BlankettService(private val tilgangService: TilgangService,
         return blankettRepository.insert(blankett)
     }
 
-    private fun hentVilkårDto(behandlingId: UUID) = vurderingService.hentVilkår(behandlingId)
+    private fun hentVilkårDto(behandlingId: UUID) = vurderingService.hentEllerOpprettVurderinger(behandlingId)
 
     private fun lagSøknadsdatoer(behandlingId: UUID) : SøknadDatoerDto {
         val overgangsstønad = behandlingService.hentOvergangsstønad(behandlingId)
@@ -74,8 +76,8 @@ class BlankettService(private val tilgangService: TilgangService,
     }
 
     private fun lagPersonopplysningerDto(behandlingId: UUID): PersonopplysningerDto {
-        val ident = fagsakService.hentFagsak(behandlingService.hentBehandling(behandlingId).fagsakId).hentAktivIdent()
-        return PersonopplysningerDto(hentGjeldendeNavn(ident), ident)
+        val aktivIdent = fagsakService.hentAktivIdent(behandlingId)
+        return PersonopplysningerDto(hentGjeldendeNavn(aktivIdent), aktivIdent)
     }
 
     private fun lagVedtakDto(behandlingId: UUID): VedtakDto {

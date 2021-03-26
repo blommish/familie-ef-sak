@@ -78,14 +78,15 @@ class VurderingService(private val behandlingService: BehandlingService,
                                                                        delvilkårsvurdering = delvilkårsvurdering)).tilDto()
     }
 
-    fun hentVilkår(behandlingId: UUID): VilkårDto {
+    @Transactional
+    fun hentEllerOpprettVurderinger(behandlingId: UUID): VilkårDto {
         val søknad =
                 loggTid(this::class, "hentVilkår", "hentOvergangsstønad") { behandlingService.hentOvergangsstønad(behandlingId) }
         val grunnlag =
                 loggTid(this::class, "hentVilkår", "hentGrunnlag") { grunnlagsdataService.hentGrunnlag(behandlingId, søknad) }
         val metadata = HovedregelMetadata(sivilstandstype = grunnlag.sivilstand.registergrunnlag.type,
                                           søknad = søknad)
-        val vurderinger = loggTid(this::class, "hentVilkår", "hentVurderinger") { hentVurderinger(behandlingId, metadata) }
+        val vurderinger = loggTid(this::class, "hentVilkår", "hentVurderinger") { hentEllerOpprettVurderinger(behandlingId, metadata) }
         return VilkårDto(vurderinger = vurderinger, grunnlag = grunnlag)
     }
 
@@ -108,8 +109,8 @@ class VurderingService(private val behandlingService: BehandlingService,
         }
     }
 
-    private fun hentVurderinger(behandlingId: UUID,
-                                metadata: HovedregelMetadata): List<VilkårsvurderingDto> {
+    private fun hentEllerOpprettVurderinger(behandlingId: UUID,
+                                            metadata: HovedregelMetadata): List<VilkårsvurderingDto> {
         return hentEllerOpprettVurderingerForVilkår(behandlingId, metadata).map(Vilkårsvurdering::tilDto)
     }
 

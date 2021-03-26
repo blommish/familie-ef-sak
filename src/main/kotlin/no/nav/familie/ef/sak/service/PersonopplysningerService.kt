@@ -35,13 +35,16 @@ class PersonopplysningerService(private val personService: PersonService,
                               personMedRelasjoner.søker.sivilstand.mapNotNull { it.relatertVedSivilstand }
                                       .filterNot { it.endsWith("00000") }
                 val identNavn = hentGjeldeneNavn(identer + andreForelderIdenter(personMedRelasjoner))
-                personopplysningerMapper.tilPersonopplysninger(
-                        personMedRelasjoner,
-                        ident,
-                        fullmakter,
-                        egenAnsattDeferred.await(),
-                        identNavn
-                )
+                val egenAnsatt = egenAnsattDeferred.await()
+                loggTid(this::class, "hentPersonopplysninger", "tilPersonopplysninger") {
+                    personopplysningerMapper.tilPersonopplysninger(
+                            personMedRelasjoner,
+                            ident,
+                            fullmakter,
+                            egenAnsatt,
+                            identNavn
+                    )
+                }
             }
         }
     }

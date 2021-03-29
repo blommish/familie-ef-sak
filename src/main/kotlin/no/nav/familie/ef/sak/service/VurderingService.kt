@@ -86,7 +86,8 @@ class VurderingService(private val behandlingService: BehandlingService,
                 loggTid(this::class, "hentVilkår", "hentGrunnlag") { grunnlagsdataService.hentGrunnlag(behandlingId, søknad) }
         val metadata = HovedregelMetadata(sivilstandstype = grunnlag.sivilstand.registergrunnlag.type,
                                           søknad = søknad)
-        val vurderinger = loggTid(this::class, "hentVilkår", "hentVurderinger") { hentEllerOpprettVurderinger(behandlingId, metadata) }
+        val vurderinger =
+                loggTid(this::class, "hentVilkår", "hentVurderinger") { hentEllerOpprettVurderinger(behandlingId, metadata) }
         return VilkårDto(vurderinger = vurderinger, grunnlag = grunnlag)
     }
 

@@ -34,9 +34,11 @@ class TilgangService(private val integrasjonerClient: FamilieIntegrasjonerClient
     }
 
     fun validerTilgangTilBehandling(behandlingId: UUID) {
-        val harTilgang = harSaksbehandlerTilgang("validerTilgangTilBehandling", behandlingId) {
-            val personIdent = behandlingService.hentAktivIdent(behandlingId)
-            harTilgangTilPersonMedBarn(personIdent)
+        val harTilgang = loggTid(this::class, "validerTilgangTilBehandling"){
+            harSaksbehandlerTilgang("validerTilgangTilBehandling", behandlingId) {
+                val personIdent = behandlingService.hentAktivIdent(behandlingId)
+                harTilgangTilPersonMedBarn(personIdent)
+            }
         }
         if (!harTilgang) {
             throw ManglerTilgang("Saksbehandler ${SikkerhetContext.hentSaksbehandler()} " +
@@ -73,7 +75,7 @@ class TilgangService(private val integrasjonerClient: FamilieIntegrasjonerClient
     private fun <T> harSaksbehandlerTilgang(cacheName: String, verdi: T, hentVerdi: () -> Boolean): Boolean {
         val cache = cacheManager.getCache(cacheName) ?: error("Finner ikke cache=$cacheName")
         return cache.get(Pair(verdi, SikkerhetContext.hentSaksbehandler(true))) {
-            loggTid(this::class, cacheName) { hentVerdi() }
+            loggTid(this::class, cacheName, "hentVerdi") { hentVerdi() }
         } ?: error("Finner ikke verdi fra cache=$cacheName")
     }
 }

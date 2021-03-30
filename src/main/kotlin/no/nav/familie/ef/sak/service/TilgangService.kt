@@ -28,8 +28,7 @@ class TilgangService(private val integrasjonerClient: FamilieIntegrasjonerClient
 
     private fun harTilgangTilPersonMedBarn(personIdent: String): Boolean {
         return harSaksbehandlerTilgang("validerTilgangTilPersonMedBarn", personIdent) {
-            val barnOgForeldre = personService.hentIdenterForBarnOgForeldre(forelderIdent = personIdent)
-            integrasjonerClient.sjekkTilgangTilPersoner(barnOgForeldre).all { it.harTilgang }
+            integrasjonerClient.sjekkTilgangTilFamilie(personIdent).harTilgang
         }
     }
 

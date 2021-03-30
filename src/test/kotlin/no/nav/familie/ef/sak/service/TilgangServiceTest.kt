@@ -16,10 +16,12 @@ import no.nav.familie.ef.sak.no.nav.familie.ef.sak.util.BrukerContextUtil.mockBr
 import no.nav.familie.ef.sak.repository.domain.Behandling
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager
 import kotlin.test.assertFailsWith
 
+@Disabled
 internal class TilgangServiceTest {
 
 

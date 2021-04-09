@@ -17,6 +17,7 @@ import no.nav.familie.ef.sak.repository.domain.*
 import no.nav.familie.ef.sak.repository.findByIdOrThrow
 import no.nav.familie.ef.sak.service.steg.StegService
 import no.nav.familie.ef.sak.service.steg.StegType
+import no.nav.familie.kontrakter.ef.søknad.Fødselsnummer
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -127,7 +128,13 @@ class VurderingService(private val behandlingService: BehandlingService,
         val nyeVilkårsvurderinger: List<Vilkårsvurdering> = alleVilkårsregler
                 .flatMap { vilkårsregel ->
                     if (vilkårsregel.vilkårType == VilkårType.ALENEOMSORG) {
-                        søknad.barn.map {
+                        søknad.barn.sortedByDescending { barn ->
+                            if (barn.fødselsnummer != null) {
+                                Fødselsnummer(barn.fødselsnummer).fødselsdato
+                            } else {
+                                barn.fødselTermindato
+                            }
+                        }.map {
                             lagNyVilkårsvurdering(vilkårsregel, metadata, behandlingId, it.id)
                         }
                     } else {
@@ -184,9 +191,9 @@ class VurderingService(private val behandlingService: BehandlingService,
     }
 
     private fun skalTilbakestilleTilVilkårSteg(vilkårsvurdering: List<VilkårType>, behandling: Behandling) =
-        vilkårsvurdering.isNotEmpty() && behandling.steg != StegType.VILKÅR
+            vilkårsvurdering.isNotEmpty() && behandling.steg != StegType.VILKÅR
 
     private fun skalFerdigstilleVilkårSteg(vilkårsvurdering: List<VilkårType>, behandling: Behandling) =
-        vilkårsvurdering.isEmpty() && behandling.steg == StegType.VILKÅR
+            vilkårsvurdering.isEmpty() && behandling.steg == StegType.VILKÅR
 
 }

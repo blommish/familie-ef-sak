@@ -112,6 +112,16 @@ class PdlClient(val pdlConfig: PdlConfig,
         return feilsjekkOgReturnerData(ident, pdlResponse) { it.hentIdenter }
     }
 
+    fun hentGeografiskTilknytning(ident: String): String {
+        val pdlGeografiskTilknytningRequest =
+                PdlGeografiskTilknytningRequest(PdlGeografiskTilknytningVariables(ident), PdlConfig.geografiskTilknytningQuery)
+
+        val response: PdlResponse<PdlGeografiskTilknytning> = postForEntity(pdlConfig.pdlUri,
+                                     pdlGeografiskTilknytningRequest,
+                                     httpHeaders())
+        return feilsjekkOgReturnerData(ident, response) { it.hentGeografiskTilknytning() }
+    }
+
     private inline fun <reified DATA : Any, reified T : Any> feilsjekkOgReturnerData(ident: String,
                                                                                      pdlResponse: PdlResponse<DATA>,
                                                                                      dataMapper: (DATA) -> T?): T {

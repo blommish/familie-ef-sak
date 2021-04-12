@@ -77,6 +77,10 @@ class PdlClientConfig {
         every { pdlClient.hentPersonidenter(any(), eq(true)) } answers
                 { PdlIdenter(listOf(PdlIdent(firstArg(), false), PdlIdent("98765432109", true))) }
 
+        every { pdlClient.hentGeografiskTilknytning(any()) } answers  {
+            "0351"
+        }
+
         return pdlClient
     }
 

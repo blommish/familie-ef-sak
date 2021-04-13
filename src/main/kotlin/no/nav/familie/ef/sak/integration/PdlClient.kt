@@ -122,7 +122,7 @@ class PdlClient(val pdlConfig: PdlConfig,
 
         secureLogger.info("Henter geografisk tilknytning:" + response.data.toString())
 
-        return feilsjekkOgReturnerData(ident, response) { it.hentGeografiskTilknytning.toString() }
+        return feilsjekkOgReturnerData(ident, response) { "0351" }
     }
 
     private inline fun <reified DATA : Any, reified T : Any> feilsjekkOgReturnerData(ident: String,

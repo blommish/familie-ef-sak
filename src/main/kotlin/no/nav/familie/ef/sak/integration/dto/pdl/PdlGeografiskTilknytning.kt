@@ -2,7 +2,7 @@ package no.nav.familie.ef.sak.integration.dto.pdl
 
 data class PdlHentGeografiskTilknytning(val hentGeografiskTilknytning: PdlGeografiskTilknytning?)
 
-data class PdlGeografiskTilknytning(val gtType: String?,
+data class PdlGeografiskTilknytning(val gtType: GeografiskTilknytningType,
                                     val gtKommune: String?,
                                     val gtBydel: String?,
                                     val gtLand: String?){
@@ -16,6 +16,7 @@ data class PdlGeografiskTilknytning(val gtType: String?,
         }
     }*/
 }
+
 
 enum class GeografiskTilknytningType {
     KOMMUNE,

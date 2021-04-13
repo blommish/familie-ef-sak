@@ -119,7 +119,10 @@ class PdlClient(val pdlConfig: PdlConfig,
         val response: PdlResponse<PdlHentGeografiskTilknytning> = postForEntity(pdlConfig.pdlUri,
                                      pdlGeografiskTilknytningRequest,
                                      httpHeaders())
-        return feilsjekkOgReturnerData(ident, response) { it.GeografiskTilknytning.hentGeografiskTilknytning() }
+
+        secureLogger.info("Henter geografisk tilknytning:" + response.data.toString())
+
+        return feilsjekkOgReturnerData(ident, response) { it.hentGeografiskTilknytning.toString() }
     }
 
     private inline fun <reified DATA : Any, reified T : Any> feilsjekkOgReturnerData(ident: String,

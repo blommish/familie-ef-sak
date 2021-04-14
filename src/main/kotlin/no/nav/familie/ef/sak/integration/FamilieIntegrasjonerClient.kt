@@ -36,8 +36,8 @@ class FamilieIntegrasjonerClient(@Qualifier("azure") restOperations: RestOperati
         return postForEntity(integrasjonerConfig.tilgangUri, identer)
     }
 
-    fun sjekkTilgangTilFamilie(personIdent: String): Tilgang {
-        return postForEntity(integrasjonerConfig.tilgangFamilieUri, PersonIdent(personIdent), HttpHeaders().also {
+    fun sjekkTilgangTilPersonMedRelasjoner(personIdent: String): Tilgang {
+        return postForEntity(integrasjonerConfig.tilgangRelasjonerUri, PersonIdent(personIdent), HttpHeaders().also {
             it.set("Nav-Tema", "ENF")
         })
     }
